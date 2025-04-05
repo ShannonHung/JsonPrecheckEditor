@@ -20,7 +20,7 @@
     },
     {
         "key": "trident_ssd_object_ids",
-        "description": "trident3",
+        "description": "trident4",
         "type": "string",
         "item_type": "object",
         "regex": "",
@@ -32,7 +32,8 @@
                     "key": "trident_ssd",
                     "operator": "eq",
                     "value": "True"
-                }
+                },
+                null
             ]
         },
         "children": [
@@ -48,11 +49,11 @@
             },
             {
                 "key": "vip",
-                "description": "should enable trident ssd object ids",
+                "description": "should enable ",
                 "type": "string",
                 "item_type": "string",
                 "regex": "*/16$",
-                "required": true,
+                "required": false,
                 "condition": null,
                 "children": []
             }

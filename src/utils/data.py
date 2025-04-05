@@ -13,10 +13,12 @@ LOGIC_TYPES = LogicTypes.get_all()
 OPERATOR_TYPES = OperationTypes.get_all()
 
 # 定義每個字段類型對應的運算符
-FIELD_OPERATORS = {
-    'bool': ['eq', 'ne'],
-    'string': ['eq', 'ne', 'not_empty', 'empty'],
-    'number': ['eq', 'ne', 'gt', 'lt'],
-    'email': ['eq', 'ne', 'gt', 'lt'],
-    'ip': ['eq', 'ne', 'gt', 'lt'],
-}
+FIELD_OPERATORS = OperationTypes.get_type_operations()
+
+# FIELD_OPERATORS = {
+#     'bool': [OperationTypes.EQ, OperationTypes.NE],
+#     'string': ['eq', 'ne', 'not_empty', 'empty'],
+#     'number': ['eq', 'ne', 'gt', 'lt'],
+#     'email': ['eq', 'ne', 'gt', 'lt'],
+#     'ip': ['eq', 'ne', 'gt', 'lt'],
+# }

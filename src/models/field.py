@@ -36,6 +36,19 @@ class Field:
         """获取子字段"""
         return self.children
 
+    def update(self, description, field_type=None, item_type=None, regex=None, required=False):
+        self.description = description
+        if field_type:
+            self.field_type = field_type
+        if item_type:
+            self.item_type = item_type
+        self.regex = regex
+        self.required = required
+
+        if self.required:
+            self.condition = None
+        return self
+
     @classmethod
     def from_dict(cls, data):
         """从字典创建一个 Field 实例"""

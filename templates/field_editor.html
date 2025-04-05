@@ -88,14 +88,7 @@
                 </div>
 
                 <div class="row mb-3">
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <label for="key" class="form-label">Field Name<span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="key" name="key" value="{{ field.key }}"
-                                   required>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
+                    <div class="col-md-12">
                         <div class="mb-3">
                             <label for="required" class="form-label">Required</label>
                                 <select class="form-select" id="required" name="required"
@@ -159,7 +152,7 @@
                                 {% for available_field in available_fields %}
                                     <option value="{{ available_field.key }}" data-type="{{ available_field.item_type }}"
                                             data-operators='{{ available_field.operators|tojson }}'>{{ available_field.key }}
-                                        ({{ available_field.item_type }})
+                                        ({{ available_field.type }})
                                     </option>
                                 {% endfor %}
                             </select>
@@ -196,7 +189,7 @@
                         {% macro render_field(condition, index, field_path, filename) %}
                             <tr>
                                 <td>{{ condition.key }}</td>
-                                <td>{% for op in operator_types %}{% if op.value == condition.operator %}{{ op.label }}
+                                <td>{% for op in all_operator_types %}{% if op.value == condition.operator %}{{ op.label }}
                                 {% endif %}{% endfor %}</td>
                                 <td>{{ condition.value }}</td>
                                 <td class="text-center">
@@ -306,12 +299,13 @@
             return;
         }
 
-        const fieldType = selectedOption.dataset.type;
+        const fieldType = selectedOption.dataset.item_type;
         const availableOperators = JSON.parse(selectedOption.dataset.operators);
-
+        console.log("availableOperators:",availableOperators)
         // Clear operator options
         operatorSelect.innerHTML = '';
         availableOperators.forEach(operator => {
+            console.log(operator);
             const option = document.createElement('option');
             option.value = operator.value;
             option.textContent = operator.label;

@@ -1,4 +1,4 @@
-from src.models.operation import OperationTypes
+from src.models.type import OperationTypes
 from typing import List
 
 class Condition:

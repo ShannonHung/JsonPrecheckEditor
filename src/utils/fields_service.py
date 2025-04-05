@@ -142,6 +142,21 @@ class FieldLoader:
         return available_fields
 
     @staticmethod
+    def get_available_child_fields(all_expends_fields):
+        """獲取可用的子字段"""
+        available_fields = []
+
+        # 根據類型過濾字段
+        for field_info in all_expends_fields:
+            if field_info['type'] not in ['object', 'list']:
+                available_fields.append({
+                    'key': field_info['key'],
+                    'type': field_info['type'],
+                    'operators': FIELD_OPERATORS.get(field_info['type'], [])
+                })
+        return available_fields
+
+    @staticmethod
     def get_parent_fields_for_child(field_list: List[Field], path: str = ''):
         parent_fields = []
 

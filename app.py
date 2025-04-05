@@ -6,7 +6,8 @@ import os
 import json
 
 from src.models import *
-from src.utils import FieldLoader, OPERATOR_TYPES, json_loader
+from src.models.condition import ConditionField
+from src.utils import FieldLoader, json_loader
 from src.models import FieldTypes
 from src.utils.json_loader import check_folder, save_json, save_json2
 
@@ -217,7 +218,7 @@ def edit_field(filename, field_path):
     data = field_loader.load_fields_to_dict()
     target = field_loader.find_field_by_path(data, field_path)
     all_expends_field = field_loader.get_all_fields(data)
-    available_fields = FieldLoader.get_available_parent_fields(all_expends_field)
+    available_fields = FieldLoader.get_available_child_fields(all_expends_field)
 
     return render_template('field_editor.html',
                            filename=filename,
@@ -227,128 +228,50 @@ def edit_field(filename, field_path):
                            field_types=FieldTypes.get_all(),
                            item_types=FieldTypes.get_item_types(),
                            logic_types=LogicTypes.get_all(),
-                           operator_types=OperationTypes.get_all())
+                           all_operator_types=OperationTypes.get_all(),
+                           operator_types=OperationTypes.get_type_operations())
 
 
 @app.route('/api/update_field/<filename>', methods=['POST'])
 def update_field(filename):
     field_loader = FieldLoader(ASSETS_FOLDER, filename)
-    data = field_loader.load_fields_to_dict()
+    fields = field_loader.load_fields_to_dict()
+
     field_path = request.form.get('field_path', '')
-    new_key = request.form.get('key')
+    field_key = request.form.get('field_key')
     description = request.form.get('description')
     field_type = request.form.get('type')
     item_type = request.form.get('item_type')
     regex = request.form.get('regex')
     required = request.form.get('required') == 'true'
 
-    # Find the field based on the provided field_path
-    field = field_loader.find_field_by_path(data, field_path)
-    if field:
-        # 检查新 key 是否已存在
+    def get_field_to_update():
+        """Retrieve the field to update based on field_path or new_key."""
         parent_path = '.'.join(field_path.split('.')[:-1])
-        parent = field_loader.find_field_by_path(data, parent_path) if parent_path else data
+        if parent_path:
+            return field_loader.find_field_by_path(fields, field_path)
 
-        # Handling case where parent is either a list or a single field (Field)
-        if isinstance(parent, list):
-            # Parent is a list of fields, check for duplicate key in the list
-            for existing_field in parent:
-                if existing_field.key == new_key:
-                    field = existing_field
+        return next((f for f in fields if f.key == field_key), None)
 
-        # Update the field attributes
-        field.key = new_key
-        field.description = description
-        if field_type:
-            field.field_type = field_type
-        if item_type:
-            field.item_type = item_type
-        field.regex = regex
-        field.required = required
-
-        # Reset condition if field is required
-        if field.required:
-            field.condition = None
-
-        # Save the updated data
-        save_json2(ASSETS_FOLDER, filename, data)
+    target = get_field_to_update()
+    if target:
+        target.update(description, field_type, item_type, regex, required)
+        save_json2(ASSETS_FOLDER, filename, fields)
         flash('Field updated successfully', 'success')
+        return redirect(url_for('edit_field', filename=filename, field_path=field_path))
     else:
-        flash('Field not found', 'danger')
-
-    return redirect(url_for('edit_field', filename=filename, field_path=field_path))
-
-# @app.route('/api/update_field/<filename>', methods=['POST'])
-# def update_field(filename):
-#     try:
-#         field_loader = FieldLoader(ASSETS_FOLDER, filename)
-#         data = field_loader.data
-#         field_path = request.form.get('field_path', '')
-#         new_key = request.form.get('key')
-#         description = request.form.get('description')
-#         field_type = request.form.get('type')
-#         item_type = request.form.get('item_type')
-#         regex = request.form.get('regex')
-#         required = request.form.get('required') == 'true'
-#
-#         field = field_loader.find_field_by_path(data, field_path)
-#         if field:
-#             # 檢查新 key 是否已存在
-#             parent_path = '.'.join(field_path.split('.')[:-1])
-#             parent = field_loader.find_field_by_path(data, parent_path) if parent_path else data
-#             if isinstance(parent, list):
-#                 for existing_field in parent:
-#                     if existing_field['key'] == new_key and existing_field != field:
-#                         flash(f'Field name "{new_key}" already exists in current level', 'error')
-#                         return redirect(url_for('edit_field', filename=filename, field_path=field_path))
-#             else:
-#                 if parent['key'] == new_key and parent != field:
-#                     flash(f'Field name "{new_key}" already exists in current level', 'error')
-#                     return redirect(url_for('edit_field', filename=filename, field_path=field_path))
-#
-#             # 更新字段
-#             field['key'] = new_key
-#             field['description'] = description
-#             if field_type:
-#                 field['type'] = field_type
-#             if item_type:
-#                 field['item_type'] = item_type
-#             field['regex'] = regex
-#             field['required'] = required
-#
-#             if field['required']:
-#                 field['condition'] = None
-#
-#             save_json(filename, data)
-#             flash('Field updated successfully', 'success')
-#         else:
-#             flash('Field not found', 'danger')
-#     except ValueError as e:
-#         flash(str(e), 'error')
-#     except Exception as e:
-#         flash(f'Error updating field: {str(e)}', 'danger')
-#
-#     return redirect(url_for('edit_field', filename=filename, field_path=field_path))
+        flash('Field not found', 'error')
+        return redirect(url_for('edit_field', filename=filename, field_path=field_path))
 
 
 @app.route('/save_condition/<filename>', methods=['POST'])
 def save_condition(filename):
     try:
         # 讀取 JSON 檔案
-        filepath = os.path.join(ASSETS_FOLDER, filename)
-        field_path = request.form.get('field_path')
-
-        if not os.path.exists(filepath):
-            flash(f"File not found: {filename}", "danger")
-            return redirect(url_for('edit_field', filename=filename, field_path=field_path))
-
         field_loader = FieldLoader(ASSETS_FOLDER, filename)
-        data = field_loader.data
+        data = field_loader.load_fields_to_dict()
 
-        if not isinstance(data, list):
-            flash("JSON file format error: root element must be an array", "danger")
-            return redirect(url_for('edit_field', filename=filename, field_path=field_path))
-
+        field_path = request.form.get('field_path')
         condition_key = request.form.get('condition_key')
         condition_operator = request.form.get('condition_operator')
         condition_value = request.form.get('condition_value')
@@ -357,30 +280,26 @@ def save_condition(filename):
             flash("Missing required parameters", "danger")
             return redirect(url_for('edit_field', filename=filename, field_path=field_path))
 
-        field = field_loader.find_field_by_path(data, field_path)
-        if not field:
+        target = field_loader.find_field_by_path(data, field_path)
+
+        if not target:
             flash("Field not found", "danger")
             return redirect(url_for('edit_field', filename=filename, field_path=field_path))
 
         # 初始化或更新 condition 結構
-        if 'condition' not in field or field['condition'] is None:
-            field['condition'] = {
-                'logical': 'and',  # 預設邏輯運算符
-                'conditions': []
-            }
+        if target.condition is None:
+            target.condition = Condition(logical='and', conditions=[])
+        else:
+            target.condition.conditions.append(ConditionField(
+                condition_key,
+                OperationTypes.get(condition_operator),
+                condition_value
+            ))
 
-        # 添加新條件
-        field['condition']['conditions'].append({
-            'key': condition_key,
-            'operator': condition_operator,
-            'value': condition_value
-        })
+        save_json2(ASSETS_FOLDER, filename, data)
+        flash('Field updated successfully', 'success')
+        return redirect(url_for('edit_field', filename=filename, field_path=field_path))
 
-        # 保存更新後的 JSON
-        with open(filepath, 'w', encoding='utf-8') as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
-
-        flash("Condition saved successfully", "success")
     except Exception as e:
         flash(f'Error saving condition: {str(e)}', "danger")
 
