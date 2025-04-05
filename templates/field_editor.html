@@ -1,0 +1,330 @@
+{% import 'component/flash_msg.html' as flash_msg %}
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Field - {{ field.key }} - JSON Editor</title>
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+</head>
+
+<body>
+
+
+<div class="container mt-5">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Edit Field - {{ field_path }}</h1>
+        <div>
+            <a href="{{ url_for('edit_file', filename=filename) }}" class="btn btn-outline-primary">Back</a>
+        </div>
+    </div>
+
+    <!-- 顯示 flash 訊息 -->
+    {{ flash_msg.flash_messages() }}
+
+
+    <!-- 資訊編輯區域 -->
+    <form action="{{ url_for('update_field', filename=filename) }}" method="POST">
+        <input type="hidden" name="field_path" value="{{ field_path }}">
+        <input type="hidden" name="field_name" value="{{ field.key }}">
+        <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Information</h5>
+                <button type="submit" class="btn btn-primary btn-sm">Update Info</button>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="type" class="form-label">Type<span class="text-danger">*</span></label>
+                            <select class="form-select" id="type" name="type" onchange="toggleItemType()"
+                                {% if (field.item_type=='list' or field.item_type=='object' ) and field.children %}disabled{% endif %}>
+                                {% for type in field_types %}
+                                    <option value="{{ type.value }}" {% if field.item_type==type.value %}selected{% endif %}>
+                                        {{ type.label }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            {% if (field.item_type == 'list' or field.item_type == 'object') and field.children %}
+                                <div class="form-text text-warning">This field contains child fields, type cannot be
+                                    modified
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-6" id="item_type_row"
+                         style="display: {% if field.item_type == 'list' %}block{% else %}none{% endif %};">
+                        <div class="mb-3">
+                            <label for="item_type" class="form-label">List Item Type<span
+                                    class="text-danger">*</span></label>
+                            <select class="form-select" id="item_type" name="item_type"
+                                    {% if field.item_type=='list' and field.children %}disabled{% endif %}>
+                                {% for type in item_types %}
+                                    <option value="{{ type.value }}"
+                                            {% if field.item_type==type.value %}selected{% endif %}>
+                                        {{ type.label }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            {% if field.item_type == 'list' and field.children %}
+                                <div class="form-text text-warning">This field contains child fields, item type cannot
+                                    be modified
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="col-md-6" id="regex-row"
+                         style="display: {% if field.item_type == 'string' %}block{% else %}none{% endif %};">
+                        <div class="mb-3">
+                            <label for="regex" class="form-label">Regex</label>
+                            <input type="text" class="form-control" id="regex" name="regex"
+                                   value="{{ field.regex or '' }}">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="key" class="form-label">Field Name<span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="key" name="key" value="{{ field.key }}"
+                                   required>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="required" class="form-label">Required</label>
+                                <select class="form-select" id="required" name="required"
+                                        onchange="handleRequiredChange(this)">
+                                    <option value="true" {% if field.required %}selected{% endif %}>Yes</option>
+                                    <option value="false" {% if not field.required %}selected{% endif %}>No</option>
+                                </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-12">
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Description</label>
+                            <textarea class="form-control" id="description" name="description"
+                                      rows="3">{{ field.description or '' }}</textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+
+
+    <!-- 條件編輯區域 -->
+    <div class="card mb-3" id="conditions-section" {% if field.required %}style="display: none;" {% endif %}>
+        <div class="card-header">
+            <h5 class="mb-0">Conditions</h5>
+        </div>
+        <div class="card-body">
+
+            <input type="hidden" name="field_path" value="{{ field_path }}">
+            <div class="row mb-3">
+                <div class="col-md-12">
+                    <div class="mb-3">
+                        <label class="form-label">Logical Operator</label>
+                        <form action="{{ url_for('update_logical', filename=filename) }}" method="POST"
+                              class="d-inline">
+                            <input type="hidden" name="field_path" value="{{ field_path }}">
+                            <select class="form-select" name="logical" onchange="this.form.submit()">
+                                {% for type in logic_types %}
+                                    <option value="{{ type.value }}"
+                                            {% if field.condition and field.condition.logical==type.value %}selected{% endif %}>
+                                        {{ type.label }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <form action="{{ url_for('save_condition', filename=filename) }}" method="POST">
+                <input type="hidden" name="field_path" value="{{ field_path }}">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            <label class="form-label">Field</label>
+                            <select class="form-select" name="condition_key" onchange="updateOperators(this)">
+                                <option value="">Select Field</option>
+                                {% for available_field in available_fields %}
+                                    <option value="{{ available_field.key }}" data-type="{{ available_field.item_type }}"
+                                            data-operators='{{ available_field.operators|tojson }}'>{{ available_field.key }}
+                                        ({{ available_field.item_type }})
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="mb-3">
+                            <label class="form-label">Operator</label>
+                            <select class="form-select" name="condition_operator">
+                                <option value="">Select Operator</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            <label class="form-label">Value</label>
+                            <input type="text" class="form-control" name="condition_value" placeholder="Enter value">
+                        </div>
+                    </div>
+                    <div class="col-md-1">
+                        <div class="mb-3">
+                            <label class="form-label">&nbsp;</label>
+                            <button type="submit" class="btn btn-primary btn-sm w-100">Add</button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+
+            <div class="mt-4">
+                <h6>Existing Conditions</h6>
+
+                {% if field.condition and field.condition.conditions and field.condition.conditions|length > 0 %}
+                    <div class="card-body">
+                        {% macro render_field(condition, index, field_path, filename) %}
+                            <tr>
+                                <td>{{ condition.key }}</td>
+                                <td>{% for op in operator_types %}{% if op.value == condition.operator %}{{ op.label }}
+                                {% endif %}{% endfor %}</td>
+                                <td>{{ condition.value }}</td>
+                                <td class="text-center">
+                                    <form action="{{ url_for('delete_condition', filename=filename) }}" method="POST"
+                                          class="d-inline">
+                                        <input type="hidden" name="field_path" value="{{ field_path }}">
+                                        <input type="hidden" name="condition_index" value="{{ index }}">
+                                        <button type="submit" class="btn btn-outline-danger btn-sm"
+                                                onclick="return confirm('Are you sure you want to delete this condition?')">
+                                            Delete
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        {% endmacro %}
+
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                <tr>
+                                    <th>Field</th>
+                                    <th>Operator</th>
+                                    <th>Value</th>
+                                    <th class="text-center">Operation</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                {% for condition in field.condition.conditions %}
+                                    {{ render_field(condition, loop.index0, field_path, filename) }}
+                                {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                {% else %}
+                    <p class="text-muted">No conditions defined</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+
+<script>
+    function handleRequiredChange(select) {
+        if (select.value === 'true') {
+            if (confirm('Are you sure you want to set this field as required? This will delete all existing conditions.')) {
+                select.form.submit();
+            } else {
+                select.value = 'false';
+            }
+        } else {
+            select.form.submit();
+        }
+    }
+
+    function toggleItemType() {
+        const typeSelect = document.getElementById('type');
+        const itemTypeRow = document.getElementById('item_type_row');
+        const itemTypeSelect = document.getElementById('item_type');
+        const regexRow = document.getElementById('regex-row');
+
+        if (typeSelect.value === 'list') {
+            itemTypeRow.style.display = 'block';
+            itemTypeSelect.required = true;
+            if (regexRow) regexRow.style.display = 'none';
+        } else {
+            itemTypeRow.style.display = 'none';
+            itemTypeSelect.required = false;
+            if (regexRow) regexRow.style.display = typeSelect.value === 'string' ? 'block' : 'none';
+        }
+    }
+
+    function deleteChildField(childKey) {
+        if (confirm('Are you sure you want to delete this field?')) {
+            const fieldPath = '{{ field_path }}.' + childKey;
+            fetch('{{ url_for("delete_field", filename=filename) }}?field_path=' + fieldPath, {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Reload child fields list
+                        location.reload();
+                    } else {
+                        alert('Delete failed: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Delete failed, please try again later');
+                });
+        }
+    }
+
+    function updateOperators(fieldSelect) {
+        const operatorSelect = fieldSelect.closest('.row').querySelector('select[name="condition_operator"]');
+        const selectedOption = fieldSelect.options[fieldSelect.selectedIndex];
+
+        if (!selectedOption.value) {
+            operatorSelect.innerHTML = '<option value="">Select Operator</option>';
+            return;
+        }
+
+        const fieldType = selectedOption.dataset.type;
+        const availableOperators = JSON.parse(selectedOption.dataset.operators);
+
+        // Clear operator options
+        operatorSelect.innerHTML = '';
+        availableOperators.forEach(operator => {
+            const option = document.createElement('option');
+            option.value = operator.value;
+            option.textContent = operator.label;
+            operatorSelect.appendChild(option);
+        });
+
+        // Remove default option from field select
+        const defaultOption = fieldSelect.querySelector('option[value=""]');
+        if (defaultOption) {
+            defaultOption.remove();
+        }
+    }
+</script>
+</body>
+
+</html>

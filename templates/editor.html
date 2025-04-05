@@ -1,0 +1,171 @@
+{% import 'component/flash_msg.html' as flash_msg %}
+{% import 'component/field_list.html' as field_list %}
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Precheck Json Editor</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+<div class="container mt-5">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1> File: {{ filename }}</h1>
+        <a href="{{ url_for('index') }}" class="btn btn-success">
+            <i class="bi bi-house-door"></i> Home
+        </a>
+    </div>
+
+    <!-- 顯示 flash 訊息 -->
+    {{ flash_msg.flash_messages() }}
+
+    <div class="card mb-4">
+        <form action="{{ url_for('add_field', filename=filename) }}" method="POST">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Add new Field</h5>
+                <button type="submit" class="btn btn-primary">Add</button>
+            </div>
+            <div class="card-body">
+                <input type="hidden" id="field_path" name="field_path" value="">
+                <div class="row">
+                    <div class="col-md-2">
+                        <div class="mb-3">
+                            <label for="parent_field" class="form-label">Parent Field
+                                <span class="text-danger"
+                                      data-bs-custom-class="custom-popover"
+                                      data-bs-trigger="hover"
+                                      data-bs-title="Parent Field"
+                                      data-bs-content="If you want to depend under a key (field), it will only be displayed in the field type is 'List' or 'Object'."
+                                      data-bs-toggle="popover"
+                                      data-bs-placement="top"
+                                ><i class="bi bi-patch-question"></i></span>
+                            </label>
+                            <select class="form-select" id="parent_field" name="parent_field"
+                                    onchange="updateFieldPath()">
+                                <option value="">Root (.)</option>
+                                {% for field in parent_fields %}
+                                    <option value="{{ field.key }}" data-type="{{ field.type }}"
+                                            data-item-type="{{ field.item_type }}">
+                                        {{ field.key }} ({{ field.type }})
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="mb-3">
+                            <label for="field_name" class="form-label">Field Name
+                                <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" class="form-control" id="field_name" name="field_name" required>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Description</label>
+                            <input type="text" class="form-control" id="description" name="description">
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="mb-3">
+                            <label for="type" class="form-label">Type</label>
+                            <select class="form-select" id="type" name="type" onchange="toggleItemType()">
+                                {% for type in field_types %}
+                                    <option value="{{ type.value }}">{{ type.label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-2" id="item_type_row" style="display: none;">
+                        <div class="mb-3">
+                            <label for="item_type" class="form-label">List Item Type<span
+                                    class="text-danger">*</span></label>
+                            <select class="form-select" id="item_type" name="item_type">
+                                {% for type in item_types %}
+                                    <option value="{{ type.value }}">{{ type.label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="mb-3">
+                            <label for="required" class="form-label">Is required?</label>
+                            <select class="form-select" id="required" name="required">
+                                <option value="true">Yes</option>
+                                <option value="false">No</option>
+                            </select>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </form>
+    </div>
+
+    {# Current Field #}
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">Current Field</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                    <tr>
+                        <th>Field</th>
+                        <th>Description</th>
+                        <th>Type</th>
+                        <th>Required</th>
+                        <th>Operation</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for field in data %}
+                        {{ field_list.render_field(filename, field) }}
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+        <!-- Pass the item_types and field_types from Jinja to JavaScript as JSON -->
+        <script type="application/json" id="item_types" data-types="{{ item_types|tojson }}"></script>
+        <script type="application/json" id="field_types" data-types="{{ field_types|tojson }}"></script>
+        <script src="{{ url_for('static', filename='js/editor.js') }}"></script>
+        <script src="{{ url_for('static', filename='js/popover.js') }}"></script>
+        <!-- Include the external JS file -->
+        <script>
+            function deleteField(fieldPath) {
+                if (confirm('Are you sure you want to delete this field?')) {
+                    fetch('{{ url_for("delete_field", filename=filename) }}?field_path=' + fieldPath, {
+                        method: 'GET',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                // 重新載入頁面以更新字段列表
+                                location.reload();
+                            } else {
+                                alert('刪除失敗：' + data.message);
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            alert('刪除失敗，請稍後再試');
+                        });
+                }
+            }
+        </script>
+
+    </div>
+</div>
+</body>
+
+</html>

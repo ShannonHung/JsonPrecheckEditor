@@ -1,0 +1,42 @@
+[
+    {
+        "key": "trident_ssd_list",
+        "description": "should enable trident ssd",
+        "type": "list",
+        "item_type": "object",
+        "regex": "*",
+        "required": false,
+        "condition": {
+            "logical": "and",
+            "conditions": [
+                {
+                    "key": "trident_ssd",
+                    "operator": "eq",
+                    "value": "True"
+                }
+            ]
+        },
+        "children": [
+            {
+                "key": "id",
+                "description": "should enable trident ssd list",
+                "type": "list",
+                "item_type": "string",
+                "regex": "",
+                "required": true,
+                "condition": null,
+                "children": []
+            },
+            {
+                "key": "vip",
+                "description": "should enable trident ssd list",
+                "type": "string",
+                "item_type": null,
+                "regex": "*",
+                "required": true,
+                "condition": null,
+                "children": []
+            }
+        ]
+    }
+]

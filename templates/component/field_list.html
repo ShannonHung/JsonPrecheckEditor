@@ -1,0 +1,29 @@
+{% macro render_field(filename, field, level=0, parent_path='') %}
+
+    <tr>
+        <td>
+            {% if level > 0 %}
+                <span class="ms-2 text-muted">{{ ' * ' * level }}</span>
+                <span class="text-muted">{{ field.key }}</span>
+            {% else %}
+                <span class="fw-bold text-primary">{{ field.key }}</span>
+            {% endif %}
+        </td>
+        <td>{{ field.description }}</td>
+        <td>{{ field.field_type }}{% if field.field_type == 'list' %} ({{ field.item_type }}){% endif %}</td>
+        <td>{{ field.required }}</td>
+        <td>
+            <form action="{{ url_for('test', filename=filename) }}" method="POST">
+                <input type="hidden" id="field_path" name="field_path" value="{{ parent_path + field.key }}">
+                <a href="{{ url_for('edit_field', filename=filename, field_path=parent_path + field.key) }}"
+                   class="btn btn-primary btn-sm">Edit</a>
+                <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+            </form>
+        </td>
+    </tr>
+    {% if field.children %}
+        {% for child in field.children %}
+            {{ render_field(filename, child, level + 1, parent_path + field.key + '.') }}
+        {% endfor %}
+    {% endif %}
+{% endmacro %}

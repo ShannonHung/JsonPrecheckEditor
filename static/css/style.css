@@ -1,0 +1,48 @@
+/* 引入 Bootstrap CSS */
+@import url("bootstrap.min.css");
+
+/* 引入 Bootstrap Icons */
+@import url("bootstrap-icons.min.css");
+
+/* 自定義樣式 */
+.custom-popover {
+  --bs-popover-max-width: 200px;
+  --bs-popover-border-color: #2a7bf5;
+  --bs-popover-header-bg: #2a7bf5;
+  --bs-popover-header-color: var(--bs-white);
+  --bs-popover-body-padding-x: 1rem;
+  --bs-popover-body-padding-y: .5rem;
+}
+
+.condition-item {
+  background-color: #f8f9fa;
+}
+
+.condition-item:hover {
+  background-color: #e9ecef;
+}
+
+.table th {
+  background-color: #f8f9fa;
+}
+
+.card-header {
+  background-color: #f8f9fa;
+}
+
+.btn-sm {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.875rem;
+}
+
+.form-text {
+  font-size: 0.875rem;
+}
+
+.text-warning {
+  color: #ffc107 !important;
+}
+
+.text-danger {
+  color: #dc3545 !important;
+}

@@ -1,0 +1,102 @@
+[
+    {
+        "key": "trident_ssd",
+        "description": "should enable trident ssd",
+        "type": "bool",
+        "item_type": null,
+        "regex": "None",
+        "required": true,
+        "condition": {
+            "logical": "and",
+            "conditions": [
+                {
+                    "key": "trident_ssd",
+                    "operator": "not_empty",
+                    "value": ""
+                }
+            ]
+        },
+        "children": []
+    },
+    {
+        "key": "trident_ssd_object_ids",
+        "description": "trident3",
+        "type": "string",
+        "item_type": "object",
+        "regex": "",
+        "required": false,
+        "condition": {
+            "logical": "and",
+            "conditions": [
+                {
+                    "key": "trident_ssd",
+                    "operator": "eq",
+                    "value": "True"
+                }
+            ]
+        },
+        "children": [
+            {
+                "key": "id",
+                "description": "should enable trident ssd object ids",
+                "type": "list",
+                "item_type": "string",
+                "regex": "",
+                "required": true,
+                "condition": null,
+                "children": []
+            },
+            {
+                "key": "vip",
+                "description": "should enable trident ssd object ids",
+                "type": "string",
+                "item_type": "string",
+                "regex": "*/16$",
+                "required": true,
+                "condition": null,
+                "children": []
+            }
+        ]
+    },
+    {
+        "key": "testList",
+        "description": "",
+        "type": "list",
+        "item_type": "object",
+        "regex": null,
+        "required": true,
+        "condition": null,
+        "children": [
+            {
+                "key": "id",
+                "description": "",
+                "type": "object",
+                "item_type": "string",
+                "regex": null,
+                "required": true,
+                "condition": null,
+                "children": []
+            },
+            {
+                "key": "name",
+                "description": "",
+                "type": "string",
+                "item_type": "string",
+                "regex": null,
+                "required": true,
+                "condition": null,
+                "children": []
+            }
+        ]
+    },
+    {
+        "key": "test",
+        "description": "",
+        "type": "list",
+        "item_type": "string",
+        "regex": null,
+        "required": true,
+        "condition": null,
+        "children": []
+    }
+]
