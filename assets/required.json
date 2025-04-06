@@ -20,7 +20,7 @@
     },
     {
         "key": "trident_ssd_object_ids",
-        "description": "trident4",
+        "description": "trident7",
         "type": "string",
         "item_type": "object",
         "regex": "",
@@ -32,6 +32,11 @@
                     "key": "trident_ssd",
                     "operator": "eq",
                     "value": "True"
+                },
+                {
+                    "key": "trident_ssd_object_ids.vip",
+                    "operator": "ne",
+                    "value": "1"
                 }
             ]
         },

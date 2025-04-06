@@ -244,23 +244,14 @@ def update_field(filename):
     item_type = request.form.get('item_type')
     regex = request.form.get('regex')
     required = request.form.get('required') == 'true'
-
-    def get_field_to_update():
-        """Retrieve the field to update based on field_path or new_key."""
-        parent_path = '.'.join(field_path.split('.')[:-1])
-        if parent_path:
-            return field_loader.find_field_by_path(fields, field_path)
-
-        return next((f for f in fields if f.key == field_key), None)
-
-    target = get_field_to_update()
+    target = field_loader.find_field_by_path(fields, field_path)
     if target:
         target.update(description, field_type, item_type, regex, required)
         save_json2(ASSETS_FOLDER, filename, fields)
         flash('Field updated successfully', 'success')
         return redirect(url_for('edit_field', filename=filename, field_path=field_path))
 
-    flash('Field not found', 'error')
+    flash('Field not found', 'danger')
     return redirect(url_for('edit_field', filename=filename, field_path=field_path))
 
 
@@ -320,37 +311,20 @@ def delete_condition(filename):
 
 @app.route('/update_logical/<filename>', methods=['POST'])
 def update_logical(filename):
-    try:
-        field_path = request.form.get('field_path')
-        logical = request.form.get('logical')
+    field_path = request.form.get('field_path')
+    logical = request.form.get('logical')
 
-        if not field_path or not logical:
-            flash(f"Field({field_path}) or logical({logical}) is empty. ")
-            return redirect(url_for('edit_field', filename=filename, field_path=field_path))
+    field_loader = FieldLoader(ASSETS_FOLDER, filename)
+    data = field_loader.load_fields_to_dict()
+    target = field_loader.find_field_by_path(data, field_path)
 
-        # 讀取並更新 JSON
-        filepath = os.path.join(ASSETS_FOLDER, filename)
-        field_loader = FieldLoader(ASSETS_FOLDER, filename)
-        data = field_loader.data
-
-        field = field_loader.find_field_by_path(data, field_path)
-        if not field:
-            flash("Field not found", "danger")
-            return redirect(url_for('edit_field', filename=filename, field_path=field_path))
-
-        # 更新邏輯運算符
-        if 'condition' not in field or field['condition'] is None:
-            field['condition'] = {'logical': "and", 'conditions': []}
-        field['condition']['logical'] = logical
-
-        # 保存更新
-        with open(filepath, 'w', encoding='utf-8') as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
-
+    if target is not None:
+        target.condition.logical = logical
+        save_json2(ASSETS_FOLDER, filename, data)
         flash(f"Logical operator updated to '{logical}'", "success")
-    except Exception as e:
-        flash(f'Update failed: {str(e)}', "danger")
-
+    else:
+        flash(f"Failed to update condition logic, cannot find target field ({field_path})",
+              "danger")
     return redirect(url_for('edit_field', filename=filename, field_path=field_path))
 
 

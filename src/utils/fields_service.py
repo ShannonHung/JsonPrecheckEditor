@@ -101,7 +101,7 @@ class FieldLoader:
             if not current:
                 error('Not exist', key)
 
-            if not is_last and current.children:
+            if not is_last:
                 current = current.children
 
         # 初始化或更新 condition 結構
