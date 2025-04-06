@@ -137,7 +137,7 @@ class FieldLoader:
 
         # 根據類型過濾字段
         for field_info in all_expends_fields:
-            if field_info['type'] in ['string', 'bool', 'number', 'email', 'ip']:
+            if (field_info['type'] == 'object') or (field_info['type'] == 'list' and field_info['item_type'] == 'object'):
                 available_fields.append({
                     'key': field_info['key'],
                     'type': field_info['type'],

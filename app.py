@@ -2,7 +2,7 @@ import json
 import os
 from typing import List
 
-from flask import (Flask, flash, jsonify, redirect, render_template, request, url_for, Response)
+from flask import (Flask, flash, redirect, render_template, request, url_for, Response)
 from werkzeug.utils import secure_filename
 
 from src.models import *
@@ -19,11 +19,11 @@ app.secret_key = 'your-secret-key-here'  # 用於 flash 訊息
 ASSETS_FOLDER = app.config['UPLOAD_FOLDER']
 
 
-# @app.errorhandler(Exception)
-# def handle_exception(e):
-#     # pass through HTTP errors
-#     flash(f'Error occurred: {str(e)}', 'danger')
-#     return redirect(url_for('error'))
+@app.errorhandler(Exception)
+def handle_exception(e):
+    # pass through HTTP errors
+    flash(f'Error occurred: {str(e)}', 'danger')
+    return redirect(url_for('error'))
 
 
 @app.route('/error')
@@ -75,29 +75,37 @@ def delete_file(filename):
 def edit_file(filename):
     field_loader = FieldLoader(ASSETS_FOLDER, filename)
     fields = field_loader.load_fields_to_dict()
+    all_expends_field = field_loader.get_all_fields(fields)
+    available_parent_fields = FieldLoader.get_available_parent_fields(all_expends_field)
+
     return render_template('editor.html',
                            filename=filename,
                            data=fields,
                            field_types=FieldTypes.get_all(),
                            item_types=FieldTypes.get_item_types(),
-                           parent_fields=field_loader.get_parent_fields_for_child(fields))
+                           parent_fields=available_parent_fields)
 
 
 @app.route('/api/add_field/<filename>', methods=['POST'])
 def add_field(filename):
     field_loader = FieldLoader(ASSETS_FOLDER, filename)
-    parent_path = request.form.get('field_path', '')
+    parent_path = request.form.get('parent_field', '')
     fields = field_loader.load_fields_to_dict()
     parent = field_loader.find_field_by_path(fields, parent_path)
 
     def create_new_field_from_request() -> Field:
-        field_type = request.form.get('type') if parent is None else parent.item_type
+        field_type = request.form.get('type')
+        if field_type == FieldTypes.Object or field_type == FieldTypes.List:
+            item_type = request.form.get('item_type')
+        else:
+            item_type = None
+
         """從表單請求中創建新字段"""
         return Field(
             key=request.form.get('field_name'),
             description=request.form.get('description'),
             field_type=field_type,
-            item_type=request.form.get('item_type'),
+            item_type=item_type,
             regex=None,
             required=request.form.get('required') == 'true',
             condition=None,
@@ -133,7 +141,7 @@ def add_field(filename):
 
     new_field = create_new_field_from_request()
 
-    if parent_path == '':
+    if parent is None:
         return handle_root_field(new_field)
     else:
         return handle_child_field(new_field)
@@ -167,52 +175,6 @@ def delete_field(filename):
 
         save_json(ASSETS_FOLDER, filename, data)
         return redirect(url_for('edit_file', filename=filename))
-#
-# @app.route('/delete_field/<filename>')
-# def delete_field(filename):
-#     field_path = request.args.get('field_path')
-#     if not field_path:
-#         flash('Field path not specified', 'error')
-#         return redirect(url_for('index'))
-#     try:
-#         field_loader = FieldLoader(ASSETS_FOLDER, filename)
-#         data = field_loader.data
-#
-#         # 分割路徑
-#         path_parts = field_path.split('.')
-#         field_name = path_parts[-1]
-#         parent_path = '.'.join(path_parts[:-1])
-#
-#         # 找到父字段
-#         if parent_path:
-#             parent_field = field_loader.find_field_by_path(data, parent_path)
-#             if not parent_field:
-#                 if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-#                     return jsonify({'success': False, 'message': 'Parent field not found'})
-#                 flash('Parent field not found', 'error')
-#                 return redirect(url_for('edit_file', filename=filename))
-#         else:
-#             parent_field = data
-#
-#         # 刪除字段
-#         if isinstance(parent_field, list):
-#             parent_field[:] = [f for f in parent_field if f['key'] != field_name]
-#         else:
-#             parent_field['children'] = [f for f in parent_field['children'] if f['key'] != field_name]
-#
-#         save_json2(ASSETS_FOLDER, filename, data)
-#
-#
-#         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-#             return jsonify({'success': True})
-#         flash('Field deleted successfully', 'success')
-#         return redirect(url_for('edit_file', filename=filename))
-#
-#     except Exception as e:
-#         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-#             return jsonify({'success': False, 'message': str(e)})
-#         flash(f'Error deleting field: {str(e)}', 'error')
-#         return redirect(url_for('edit_file', filename=filename))
 
 
 # ==== Field 相關 ====
@@ -221,11 +183,19 @@ def delete_field(filename):
 def edit_field(filename, field_path):
     field_loader = FieldLoader(ASSETS_FOLDER, filename)
     data = field_loader.load_fields_to_dict()
+
+    path_parts = field_path.split('.')
+    field_name = path_parts[-1]
+    parent_path = '.'.join(path_parts[:-1])
+
+    parent = field_loader.find_field_by_path(data, parent_path)
+
     target = field_loader.find_field_by_path(data, field_path)
     all_expends_field = field_loader.get_all_fields(data)
     available_fields = FieldLoader.get_available_child_fields(all_expends_field)
 
     return render_template('field_editor.html',
+                           parent=parent,
                            filename=filename,
                            field=target,
                            field_path=field_path,

@@ -1,6 +1,10 @@
 {% import 'component/flash_msg.html' as flash_msg %}
 {% import 'component/popover.html' as popover %}
 {% set has_child_fields = (field.field_type == 'list' or field.field_type == 'object') and field.children|length > 0 %}
+{% set has_parent_field = (parent.field_type == 'list' and parent.item_type != 'object') %}
+{% set has_conditions = (field.condition and field.condition.conditions | length > 0) %}
+{% set error_msg_has_parent_fields = "This field contains parent fields. So user can only set this field as parent's item type." %}
+{% set error_msg_has_child_fields = "This field contains child fields, type cannot be modified." %}
 
 <!DOCTYPE html>
 <html lang="en">
@@ -18,7 +22,7 @@
 <div class="container mt-5">
 
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1>Edit Field -  <span class="fw-bold text-primary">{{ field_path }}</span></h1>
+        <h1>Edit Field - <span class="fw-bold text-primary">{{ field_path }}</span></h1>
         <div>
             <a href="{{ url_for('edit_file', filename=filename) }}" class="btn btn-outline-primary">
                 <i class="bi bi-box-arrow-in-left"></i> Back</a>
@@ -38,35 +42,41 @@
                 <h5 class="mb-0">Information</h5>
                 <button type="submit" class="btn btn-primary">
                     <i class="bi bi-upload"></i>
-                    Update Info</button>
+                    Update Info
+                </button>
             </div>
             <div class="card-body">
                 <div class="row mb-3">
                     <div class="col-md-6">
                         <div class="mb-3">
-                            <label for="type" class="form-label">Type<span class="text-danger">*</span></label>
-                            <select class="form-select" id="type" name="type" onchange="toggleItemType()"
-                                {% if has_child_fields %}disabled{% endif %}>
+                            <label for="type" class="form-label">Type
+                                {{ popover.popover("Only when 'type' is 'list' can edit 'item type', and type with 'string' can edit regex.") }}
+                            </label>
+                            <select class="form-select" id="type" name="type" onchange="toggleFieldType()"
+                                    {% if has_child_fields or has_parent_field %}disabled{% endif %}>
                                 {% for type in field_types %}
-                                    <option value="{{ type.value }}" {% if field.field_type==type.value %}selected{% endif %}>
+                                    <option value="{{ type.value }}"
+                                            {% if field.field_type==type.value %}selected{% endif %}>
                                         {{ type.label }}
                                     </option>
                                 {% endfor %}
                             </select>
                             {% if has_child_fields %}
-                                <div class="form-text text-warning">This field contains child fields, type cannot be
-                                    modified
+                                <div class="form-text text-danger">{{ error_msg_has_child_fields }}
+                                </div>
+                            {% elif has_parent_field %}
+                                <div class="form-text text-danger">{{ error_msg_has_parent_fields }}
                                 </div>
                             {% endif %}
                         </div>
                     </div>
                     <div class="col-md-6" id="item_type_row"
-                         style="display: block">
+                         style="display: {{ 'block' if field.field_type == 'list' else 'none' }};">
                         <div class="mb-3">
                             <label for="item_type" class="form-label">List Item Type<span
                                     class="text-danger">*</span></label>
                             <select class="form-select" id="item_type" name="item_type"
-                                    {% if has_child_fields %}disabled{% endif %}>
+                                    {% if has_child_fields or has_parent_field %}disabled{% endif %}>
                                 {% for type in item_types %}
                                     <option value="{{ type.value }}"
                                             {% if field.item_type==type.value %}selected{% endif %}>
@@ -75,15 +85,16 @@
                                 {% endfor %}
                             </select>
                             {% if has_child_fields %}
-                                <div class="form-text text-warning">This field contains child fields, item type cannot
-                                    be modified
+                                <div class="form-text text-danger">{{ error_msg_has_child_fields }}
+                                </div>
+                            {% elif has_parent_field %}
+                                <div class="form-text text-danger">{{ error_msg_has_parent_fields }}
                                 </div>
                             {% endif %}
                         </div>
                     </div>
-
                     <div class="col-md-6" id="regex-row"
-                         style="display: {% if field.item_type == 'string' %}block{% else %}none{% endif %};">
+                         style="display: {% if field.field_type == 'string' %}block{% else %}none{% endif %};">
                         <div class="mb-3">
                             <label for="regex" class="form-label">Regex</label>
                             <input type="text" class="form-control" id="regex" name="regex"
@@ -98,15 +109,14 @@
                             <label for="required" class="form-label">
                                 Required
                                 {{ popover.popover(
-                                    "Required",
-                                    "If this field is set to 'required', there is no need to setup conditions."
+                                    "If this field is set to 'True' (required), there is no need to setup conditions."
                                 ) }}
                             </label>
-                                <select class="form-select" id="required" name="required"
-                                        onchange="handleRequiredChange(this)">
-                                    <option value="true" {% if field.required %}selected{% endif %}>Yes</option>
-                                    <option value="false" {% if not field.required %}selected{% endif %}>No</option>
-                                </select>
+                            <select class="form-select" id="required" name="required"
+                                    onchange="handleRequiredChange(this)">
+                                <option value="true" {% if field.required %}selected{% endif %}>Yes</option>
+                                <option value="false" {% if not field.required %}selected{% endif %}>No</option>
+                            </select>
                         </div>
                     </div>
                 </div>
@@ -161,7 +171,8 @@
                             <select class="form-select" name="condition_key" onchange="updateOperators(this)">
                                 <option value="">Select Field</option>
                                 {% for available_field in available_fields %}
-                                    <option value="{{ available_field.key }}" data-type="{{ available_field.item_type }}"
+                                    <option value="{{ available_field.key }}"
+                                            data-type="{{ available_field.item_type }}"
                                             data-operators='{{ available_field.operators|tojson }}'>{{ available_field.key }}
                                         ({{ available_field.type }})
                                     </option>
@@ -187,7 +198,8 @@
                         <div class="mb-3">
                             <label class="form-label">&nbsp;</label>
                             <button type="submit" class="btn btn-primary w-100">
-                                <i class="bi bi-plus-circle"></i> Add </button>
+                                <i class="bi bi-plus-circle"></i> Add
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -195,13 +207,13 @@
 
             <div class="mt-4">
                 <h6>Existing Conditions</h6>
-
-                {% if has_child_fields %}
+                {% if has_conditions %}
                     <div class="card-body">
                         {% macro render_field(condition, index, field_path, filename) %}
                             <tr>
                                 <td>{{ condition.key }}</td>
-                                <td>{% for op in all_operator_types %}{% if op.value == condition.operator %}{{ op.label }}
+                                <td>{% for op in all_operator_types %}{% if op.value == condition.operator %}
+                                    {{ op.label }}
                                 {% endif %}{% endfor %}</td>
                                 <td>{{ condition.value }}</td>
                                 <td class="text-center">
@@ -258,13 +270,13 @@
         }
     }
 
-    function toggleItemType() {
+    function toggleFieldType() {
         const typeSelect = document.getElementById('type');
         const itemTypeRow = document.getElementById('item_type_row');
         const itemTypeSelect = document.getElementById('item_type');
         const regexRow = document.getElementById('regex-row');
 
-        if (typeSelect.value === 'list' || typeSelect.value === 'object') {
+        if (typeSelect.value === 'list') {
             itemTypeRow.style.display = 'block';
             itemTypeSelect.required = true;
             if (regexRow) regexRow.style.display = 'none';
@@ -311,7 +323,6 @@
 
         const fieldType = selectedOption.dataset.item_type;
         const availableOperators = JSON.parse(selectedOption.dataset.operators);
-        console.log("availableOperators:",availableOperators)
         // Clear operator options
         operatorSelect.innerHTML = '';
         availableOperators.forEach(operator => {

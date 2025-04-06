@@ -38,12 +38,12 @@
                             <label for="parent_field" class="form-label">
                                 Parent Field
                                 {{ popover.popover(
-                                    "Parent Field",
-                                    "If you want to depend under a key (field), it only shows the field which type is 'List' or 'Object'. Because only 'list' and 'object' type can have child fields."
+                                    "If you want to depend on a parent fields, it only shows the field which type is 'list(object)' or 'object'. Because only these kind of parent field can have child fields."
                                 ) }}
                             </label>
-                            <select class="form-select" id="parent_field" name="parent_field"
-                                    onchange="updateFieldPath()">
+{#                            <select class="form-select" id="parent_field" name="parent_field"#}
+{#                                    onchange="updateFieldPath()">#}
+                            <select class="form-select" id="parent_field" name="parent_field">
                                 <option value="">Root (.)</option>
                                 {% for field in parent_fields %}
                                     <option value="{{ field.key }}" data-type="{{ field.type }}"
@@ -72,8 +72,7 @@
                         <div class="mb-3">
                             <label for="type" class="form-label">Type
                                 {{ popover.popover(
-                                    "Field Type",
-                                    "When created field specify the parent field. This will depends on the parent's item type to restrict the option."
+                                    "These types are precheck rules for yaml key's value."
                                 ) }}
                             </label>
                             <select class="form-select" id="type" name="type" onchange="toggleItemType()">
@@ -96,7 +95,11 @@
                     </div>
                     <div class="col-md-2">
                         <div class="mb-3">
-                            <label for="required" class="form-label">Is required?</label>
+                            <label for="required" class="form-label">Is required?
+                                {{ popover.popover(
+                                    "When it set up to 'True', this field must show up in the YAML file."
+                                ) }}
+                            </label>
                             <select class="form-select" id="required" name="required">
                                 <option value="true">Yes</option>
                                 <option value="false">No</option>
