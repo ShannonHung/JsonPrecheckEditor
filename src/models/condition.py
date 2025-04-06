@@ -16,7 +16,7 @@ class Condition:
 class ConditionField:
     def __init__(self,
                  key: str,
-                 operator: OperationTypes,
+                 operator: str,
                  value: str):
         self.key = key
         self.operator = operator

@@ -259,105 +259,62 @@ def update_field(filename):
         save_json2(ASSETS_FOLDER, filename, fields)
         flash('Field updated successfully', 'success')
         return redirect(url_for('edit_field', filename=filename, field_path=field_path))
-    else:
-        flash('Field not found', 'error')
-        return redirect(url_for('edit_field', filename=filename, field_path=field_path))
+
+    flash('Field not found', 'error')
+    return redirect(url_for('edit_field', filename=filename, field_path=field_path))
 
 
 @app.route('/save_condition/<filename>', methods=['POST'])
 def save_condition(filename):
-    try:
-        # 讀取 JSON 檔案
-        field_loader = FieldLoader(ASSETS_FOLDER, filename)
-        data = field_loader.load_fields_to_dict()
+    field_path = request.form.get('field_path')
+    field_loader = FieldLoader(ASSETS_FOLDER, filename)
+    data = field_loader.load_fields_to_dict()
 
-        field_path = request.form.get('field_path')
-        condition_key = request.form.get('condition_key')
-        condition_operator = request.form.get('condition_operator')
-        condition_value = request.form.get('condition_value')
+    # form 讀取
+    condition_key = request.form.get('condition_key')
+    condition_operator = request.form.get('condition_operator')
+    condition_value = request.form.get('condition_value')
 
-        if not all([field_path, condition_key, condition_operator, condition_value]):
-            flash("Missing required parameters", "danger")
-            return redirect(url_for('edit_field', filename=filename, field_path=field_path))
+    if not all([field_path, condition_key, condition_operator, condition_value]):
 
-        target = field_loader.find_field_by_path(data, field_path)
-
-        if not target:
-            flash("Field not found", "danger")
-            return redirect(url_for('edit_field', filename=filename, field_path=field_path))
-
-        # 初始化或更新 condition 結構
-        if target.condition is None:
-            target.condition = Condition(logical='and', conditions=[])
-        else:
-            target.condition.conditions.append(ConditionField(
-                condition_key,
-                OperationTypes.get(condition_operator),
-                condition_value
-            ))
-
-        save_json2(ASSETS_FOLDER, filename, data)
-        flash('Field updated successfully', 'success')
+        flash(f"Missing required parameters "
+              f"(Field: '{condition_key}', Operator: '{condition_operator}', Value: '{condition_value}')"
+              , "danger")
         return redirect(url_for('edit_field', filename=filename, field_path=field_path))
 
-    except Exception as e:
-        flash(f'Error saving condition: {str(e)}', "danger")
+    target = field_loader.find_field_by_path(data, field_path)
+    if not target:
+        flash(f"Field not found (field_path: '{field_path}')", "danger")
+        return redirect(url_for('edit_field', filename=filename, field_path=field_path))
 
+    target.condition.conditions.append(ConditionField(
+        condition_key,
+        condition_operator,
+        condition_value
+    ))
+    save_json2(ASSETS_FOLDER, filename, data)
+    flash('Field updated successfully', 'success')
     return redirect(url_for('edit_field', filename=filename, field_path=field_path))
 
 
 @app.route('/delete_condition/<filename>', methods=['POST'])
 def delete_condition(filename):
-    try:
-        # 讀取 JSON 檔案
-        filepath = os.path.join(ASSETS_FOLDER, filename)
-        field_path = request.form.get('field_path')
+    field_path = request.form.get('field_path')
+    field_loader = FieldLoader(ASSETS_FOLDER, filename)
+    data = field_loader.load_fields_to_dict()
+    condition_index = int(request.form.get('condition_index'))
 
-        if not os.path.exists(filepath):
-            flash(f"File not found: {filename}", "danger")
-            return redirect(url_for('edit_field', filename=filename, field_path=field_path))
-
-        field_loader = FieldLoader(ASSETS_FOLDER, filename)
-        data = field_loader.data
-
-        if not isinstance(data, list):
-            flash("JSON file format error: root element must be an array", "danger")
-            return redirect(url_for('edit_field', filename=filename, field_path=field_path))
-
-        field_path = request.form.get('field_path')
-        condition_index = int(request.form.get('condition_index'))
-
-        if not field_path:
-            flash("Missing required parameters", "danger")
-            return redirect(url_for('edit_field', filename=filename, field_path=field_path))
-
-        field = field_loader.find_field_by_path(data, field_path)
-        if not field:
-            flash("Field not found", "danger")
-            return redirect(url_for('edit_field', filename=filename, field_path=field_path))
-
-        # 檢查並刪除條件
-        if 'condition' in field and 'conditions' in field['condition']:
-            if 0 <= condition_index < len(field['condition']['conditions']):
-                field['condition']['conditions'].pop(condition_index)
-
-                # 如果沒有條件了，刪除整個 condition 結構
-                if not field['condition']['conditions']:
-                    del field['condition']
-
-                # 保存更新後的 JSON
-                with open(filepath, 'w', encoding='utf-8') as f:
-                    json.dump(data, f, ensure_ascii=False, indent=2)
-
-                flash("Condition deleted successfully", "success")
-            else:
-                flash("Condition not found", "danger")
+    target = field_loader.find_field_by_path(data, field_path)
+    if target.condition and len(target.condition.conditions) > 0:
+        if 0 <= condition_index < len(target.condition.conditions):
+            target.condition.conditions.pop(condition_index)
+            # 如果沒有條件了，刪除整個 condition 結構
+            if len(target.condition.conditions) == 0:
+                target.condition = None
+            save_json2(ASSETS_FOLDER, filename, data)
+            flash("Condition deleted successfully", "success")
         else:
-            flash("No conditions found for this field", "danger")
-
-    except Exception as e:
-        flash(f'Error deleting condition: {str(e)}', "danger")
-
+            flash("Condition not found", "danger")
     return redirect(url_for('edit_field', filename=filename, field_path=field_path))
 
 

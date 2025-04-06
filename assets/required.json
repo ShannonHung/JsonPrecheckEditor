@@ -32,8 +32,7 @@
                     "key": "trident_ssd",
                     "operator": "eq",
                     "value": "True"
-                },
-                null
+                }
             ]
         },
         "children": [

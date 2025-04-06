@@ -1,4 +1,4 @@
-from src.models.condition import Condition
+from src.models.condition import Condition, ConditionField
 
 
 class Field:
@@ -56,8 +56,13 @@ class Field:
         if 'condition' in data and data['condition']:
             condition = Condition(
                 logical=data['condition'].get('logical'),
-                conditions=data['condition'].get('conditions')
             )
+
+            if 'conditions' in data['condition']:
+                conditions = data['condition']['conditions']
+                condition.conditions = [ConditionField(con['key'],
+                                                       con['operator'],
+                                                       con['value']) for con in conditions]
 
         children = []
         if 'children' in data:

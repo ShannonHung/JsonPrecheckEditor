@@ -2,7 +2,7 @@ import json
 from typing import LiteralString
 
 from src.models.field import Field
-from src.models.condition import Condition
+from src.models.condition import Condition, ConditionField
 
 
 class CustomEncoder(json.JSONEncoder):
@@ -27,7 +27,15 @@ class CustomEncoder(json.JSONEncoder):
                 "conditions": obj.conditions
             }
 
+        elif isinstance(obj, ConditionField):
+            field = {
+                "key": obj.key,
+                "operator": obj.operator,
+                "value": obj.value
+            }
+
         return field
+
 
 
 class ObjectToJsonFile:

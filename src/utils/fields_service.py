@@ -1,6 +1,6 @@
 from typing import List
 
-from src.models import Field, FieldTypes
+from src.models import Field, FieldTypes, Condition
 from src.utils.data import FIELD_OPERATORS, OPERATOR_TYPES
 from src.utils.json_loader import load_json as JsonLoader
 from src.utils.json_loader import load_json_to_fields as JsonLoaderToFields
@@ -85,11 +85,11 @@ class FieldLoader:
     @staticmethod
     def find_field_by_path(data: List[Field], path) -> Field | None:
         """根據路徑查找字段"""
-        if not path:
-            return None
-
         def error(msg, field):
             raise ValueError(f"Cannot find path '{path}'：'{field}' {msg}")
+
+        if not path:
+            error(f"Path '{path}' is empty.", path)
 
         keys = path.split('.')
         current = data
@@ -103,6 +103,10 @@ class FieldLoader:
 
             if not is_last and current.children:
                 current = current.children
+
+        # 初始化或更新 condition 結構
+        if current.condition is None:
+            current.condition = Condition(logical='and', conditions=[])
 
         return current
 

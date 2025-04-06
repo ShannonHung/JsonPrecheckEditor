@@ -49,21 +49,29 @@ class FieldTypes:
 
 
 class OperationTypes:
+    EQ = 'eq'
+    NE = 'ne'
+    GT = 'gt'
+    LT = 'lt'
+    NOT_EMPTY = 'not_empty'
+    EMPTY = 'empty'
+
+
     # 定義所有運算符
-    EQ = {'value': 'eq', 'label': '=='}
-    NE = {'value': 'ne', 'label': '!='}
-    GT = {'value': 'gt', 'label': '>'}
-    LT = {'value': 'lt', 'label': '<'}
-    NOT_EMPTY = {'value': 'not_empty', 'label': 'Not None'}
-    EMPTY = {'value': 'empty', 'label': 'Is None'}
+    _EQ = {'value': EQ, 'label': '=='}
+    _NE = {'value': NE, 'label': '!='}
+    _GT = {'value': GT, 'label': '>'}
+    _LT = {'value': LT, 'label': '<'}
+    _NOT_EMPTY = {'value': NOT_EMPTY, 'label': 'Not None'}
+    _EMPTY = {'value': EMPTY, 'label': 'Is None'}
 
     # 定義運算符與 FieldType 的映射
     _TYPE_OPERATORS = {
-        FieldTypes.Bool: [EQ, NE],
-        FieldTypes.String: [EQ, NE, NOT_EMPTY, EMPTY],
-        FieldTypes.Number: [EQ, NE, GT, LT],
-        FieldTypes.Email: [EQ, NE, GT, LT],
-        FieldTypes.IP: [EQ, NE, GT, LT],
+        FieldTypes.Bool: [_EQ, _NE],
+        FieldTypes.String: [_EQ, _NE, _NOT_EMPTY, _EMPTY],
+        FieldTypes.Number: [_EQ, _NE, _GT, _LT],
+        FieldTypes.Email: [_EQ, _NE, _GT, _LT],
+        FieldTypes.IP: [_EQ, _NE, _GT, _LT],
     }
 
     @classmethod
@@ -78,12 +86,12 @@ class OperationTypes:
 
     @classmethod
     def get_all(cls):
-        return [cls.EQ, cls.NE, cls.GT, cls.LT, cls.NOT_EMPTY, cls.EMPTY]
+        return [cls._EQ, cls._NE, cls._GT, cls._LT, cls._NOT_EMPTY, cls._EMPTY]
 
     @classmethod
     def get(cls, condition_operator):
         """ 根據運算符值返回對應的運算符 """
         for operator in cls.get_all():
             if operator['value'] == condition_operator:
-                return operator
+                return operator['label']
         return None
