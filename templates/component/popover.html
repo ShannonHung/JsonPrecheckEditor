@@ -1,0 +1,13 @@
+{% macro popover(title='Hint', content='No details provided.', icon='bi-patch-question') %}
+<span class="text-danger"
+      data-bs-custom-class="custom-popover"
+      data-bs-trigger="hover"
+      data-bs-title="{{ title }}"
+      data-bs-content="{{ content }}"
+      data-bs-toggle="popover"
+      data-bs-placement="right"
+>
+  <i class="bi {{ icon }}"></i>
+</span>
+<script src="{{ url_for('static', filename='js/popover.js') }}"></script>
+{% endmacro %}

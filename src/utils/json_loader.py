@@ -1,8 +1,8 @@
-import os
 import json
+import os
 from typing import List
 
-from src.models import Field, ObjectToJsonFile, CustomEncoder
+from src.models import Field, CustomEncoder
 
 
 def load_json(filepath, filename):
@@ -11,6 +11,7 @@ def load_json(filepath, filename):
         with open(filepath, 'r') as f:
             return json.load(f)
     return []
+
 
 def load_json_to_fields(filepath, filename) -> List[Field]:
     filepath = os.path.join(filepath, filename)
@@ -21,15 +22,12 @@ def load_json_to_fields(filepath, filename) -> List[Field]:
             return fields
     return []
 
-def save_json(folder_path, filename, data):
-    filepath = os.path.join(folder_path, filename)
-    with open(filepath, 'w') as f:
-        json.dump(data, f, indent=2)
 
-def save_json2(folder_path, filename, data):
+def save_json(folder_path, filename, data):
     filepath = os.path.join(folder_path, filename)
     with open(filepath, "w") as file:
         json.dump(data, file, cls=CustomEncoder, indent=4)
+
 
 def check_folder(folder_path):
     # 確保 assets 目錄存在

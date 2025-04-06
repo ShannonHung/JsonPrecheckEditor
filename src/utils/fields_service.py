@@ -89,7 +89,7 @@ class FieldLoader:
             raise ValueError(f"Cannot find path '{path}'：'{field}' {msg}")
 
         if not path:
-            error(f"Path '{path}' is empty.", path)
+            return None
 
         keys = path.split('.')
         current = data

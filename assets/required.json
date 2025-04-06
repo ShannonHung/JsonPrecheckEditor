@@ -20,8 +20,8 @@
     },
     {
         "key": "trident_ssd_object_ids",
-        "description": "trident7",
-        "type": "string",
+        "description": "ssd description",
+        "type": "list",
         "item_type": "object",
         "regex": "",
         "required": false,
@@ -68,36 +68,29 @@
         "description": "",
         "type": "list",
         "item_type": "object",
-        "regex": null,
+        "regex": "",
         "required": true,
         "condition": null,
         "children": [
             {
                 "key": "id",
                 "description": "",
-                "type": "object",
+                "type": "list",
                 "item_type": "string",
                 "regex": null,
                 "required": true,
-                "condition": null,
-                "children": []
-            },
-            {
-                "key": "name",
-                "description": "",
-                "type": "string",
-                "item_type": "string",
-                "regex": null,
-                "required": true,
-                "condition": null,
+                "condition": {
+                    "logical": "and",
+                    "conditions": []
+                },
                 "children": []
             }
         ]
     },
     {
-        "key": "test",
+        "key": "test2",
         "description": "",
-        "type": "list",
+        "type": "object",
         "item_type": "string",
         "regex": null,
         "required": true,

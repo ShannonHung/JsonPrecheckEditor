@@ -1,5 +1,6 @@
 {% import 'component/flash_msg.html' as flash_msg %}
 {% import 'component/field_list.html' as field_list %}
+{% import 'component/popover.html' as popover %}
 
 <!DOCTYPE html>
 <html lang="en">
@@ -14,7 +15,7 @@
 <div class="container mt-5">
 
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1> File: {{ filename }}</h1>
+        <h1> File: <span class="fw-bold text-primary">{{ filename }}</span></h1>
         <a href="{{ url_for('index') }}" class="btn btn-success">
             <i class="bi bi-house-door"></i> Home
         </a>
@@ -27,22 +28,19 @@
         <form action="{{ url_for('add_field', filename=filename) }}" method="POST">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">Add new Field</h5>
-                <button type="submit" class="btn btn-primary">Add</button>
+                <button type="submit" class="btn btn-primary"><i class="bi bi-plus-circle"></i> Add </button>
             </div>
             <div class="card-body">
                 <input type="hidden" id="field_path" name="field_path" value="">
                 <div class="row">
                     <div class="col-md-2">
                         <div class="mb-3">
-                            <label for="parent_field" class="form-label">Parent Field
-                                <span class="text-danger"
-                                      data-bs-custom-class="custom-popover"
-                                      data-bs-trigger="hover"
-                                      data-bs-title="Parent Field"
-                                      data-bs-content="If you want to depend under a key (field), it will only be displayed in the field type is 'List' or 'Object'."
-                                      data-bs-toggle="popover"
-                                      data-bs-placement="top"
-                                ><i class="bi bi-patch-question"></i></span>
+                            <label for="parent_field" class="form-label">
+                                Parent Field
+                                {{ popover.popover(
+                                    "Parent Field",
+                                    "If you want to depend under a key (field), it only shows the field which type is 'List' or 'Object'. Because only 'list' and 'object' type can have child fields."
+                                ) }}
                             </label>
                             <select class="form-select" id="parent_field" name="parent_field"
                                     onchange="updateFieldPath()">
@@ -72,7 +70,12 @@
                     </div>
                     <div class="col-md-2">
                         <div class="mb-3">
-                            <label for="type" class="form-label">Type</label>
+                            <label for="type" class="form-label">Type
+                                {{ popover.popover(
+                                    "Field Type",
+                                    "When created field specify the parent field. This will depends on the parent's item type to restrict the option."
+                                ) }}
+                            </label>
                             <select class="form-select" id="type" name="type" onchange="toggleItemType()">
                                 {% for type in field_types %}
                                     <option value="{{ type.value }}">{{ type.label }}</option>
@@ -132,34 +135,48 @@
             </div>
         </div>
         <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
-        <!-- Pass the item_types and field_types from Jinja to JavaScript as JSON -->
-        <script type="application/json" id="item_types" data-types="{{ item_types|tojson }}"></script>
-        <script type="application/json" id="field_types" data-types="{{ field_types|tojson }}"></script>
         <script src="{{ url_for('static', filename='js/editor.js') }}"></script>
-        <script src="{{ url_for('static', filename='js/popover.js') }}"></script>
         <!-- Include the external JS file -->
         <script>
-            function deleteField(fieldPath) {
-                if (confirm('Are you sure you want to delete this field?')) {
-                    fetch('{{ url_for("delete_field", filename=filename) }}?field_path=' + fieldPath, {
-                        method: 'GET',
-                        headers: {
-                            'X-Requested-With': 'XMLHttpRequest'
+            function updateFieldPath() {
+                const parentField = document.getElementById('parent_field');
+                const selectedOption = parentField.options[parentField.selectedIndex];
+                document.getElementById('field_path').value = parentField.value;
+
+                // 檢查父字段的類型
+                if (parentField.value) {
+                    const parentType = selectedOption.getAttribute('data-type');
+                    const itemType = selectedOption.getAttribute('data-item-type');
+                    if (parentType === 'list') {
+                        // 如果父字段是 list 類型
+                        if (itemType === 'object') {
+                            // 如果 item_type 是 object，允許選擇 ITEM_TYPES 中的所有選項
+                            const typeSelect = document.getElementById('type');
+                            typeSelect.disabled = false;
+                            // 重置 type 選擇器的選項
+                            typeSelect.innerHTML = '';
+                            {% for type in item_types %}
+                                typeSelect.add(new Option('{{ type.label }}', '{{ type.value }}'));
+                            {% endfor %}
+                        } else {
+                            // 如果 item_type 不是 object，鎖定為 item_type
+                            const typeSelect = document.getElementById('type');
+                            typeSelect.disabled = true;
+                            typeSelect.value = itemType;
                         }
-                    })
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.success) {
-                                // 重新載入頁面以更新字段列表
-                                location.reload();
-                            } else {
-                                alert('刪除失敗：' + data.message);
-                            }
-                        })
-                        .catch(error => {
-                            console.error('Error:', error);
-                            alert('刪除失敗，請稍後再試');
-                        });
+                    } else if (parentType !== 'object') {
+                        // 如果父字段不是 list 或 object，禁用 type 選擇器
+                        const typeSelect = document.getElementById('type');
+                        typeSelect.disabled = true;
+                    }
+                } else {
+                    // 如果沒有選擇父字段，啟用 type 選擇器並重置選項
+                    const typeSelect = document.getElementById('type');
+                    typeSelect.disabled = false;
+                    typeSelect.innerHTML = '';
+                    {% for type in field_types %}
+                        typeSelect.add(new Option('{{ type.label }}', '{{ type.value }}'));
+                    {% endfor %}
                 }
             }
         </script>

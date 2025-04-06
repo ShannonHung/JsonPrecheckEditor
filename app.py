@@ -1,15 +1,15 @@
+import json
+import os
 from typing import List
 
 from flask import (Flask, flash, jsonify, redirect, render_template, request, url_for, Response)
 from werkzeug.utils import secure_filename
-import os
-import json
 
 from src.models import *
-from src.models.condition import ConditionField
-from src.utils import FieldLoader, json_loader
 from src.models import FieldTypes
-from src.utils.json_loader import check_folder, save_json, save_json2
+from src.models.condition import ConditionField
+from src.utils import FieldLoader
+from src.utils.json_loader import check_folder, save_json
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'assets'
@@ -41,6 +41,8 @@ def index():
 @app.route('/create', methods=['POST'])
 def create_file():
     filename = secure_filename(request.form.get('filename'))
+    if not filename.endswith('.json'):
+        filename += '.json'
     filepath = os.path.join(ASSETS_FOLDER, filename)
 
     # 檢查檔案是否已存在
@@ -85,13 +87,16 @@ def edit_file(filename):
 def add_field(filename):
     field_loader = FieldLoader(ASSETS_FOLDER, filename)
     parent_path = request.form.get('field_path', '')
+    fields = field_loader.load_fields_to_dict()
+    parent = field_loader.find_field_by_path(fields, parent_path)
 
     def create_new_field_from_request() -> Field:
+        field_type = request.form.get('type') if parent is None else parent.item_type
         """從表單請求中創建新字段"""
         return Field(
             key=request.form.get('field_name'),
             description=request.form.get('description'),
-            field_type=request.form.get('type'),
+            field_type=field_type,
             item_type=request.form.get('item_type'),
             regex=None,
             required=request.form.get('required') == 'true',
@@ -99,9 +104,9 @@ def add_field(filename):
             children=[]
         )
 
-    def handle_child_field(fields: List[Field], added_field: Field) -> Response:
+    def handle_child_field(added_field: Field) -> Response:
         """處理子層級的新字段"""
-        parent = field_loader.find_field_by_path2(fields, parent_path)
+
         if not parent:
             flash(f'Parent field not found: {parent_path}', 'error')
             return redirect(url_for('edit_file', filename=filename))
@@ -111,31 +116,31 @@ def add_field(filename):
             return redirect(url_for('edit_file', filename=filename))
 
         parent.children.append(added_field)
-        save_json2(ASSETS_FOLDER, filename, fields)
+        save_json(ASSETS_FOLDER, filename, fields)
         flash(f'Add new field "{added_field.key}" success in "{parent_path}".', 'success')
         return redirect(url_for('edit_file', filename=filename))
 
-    def handle_root_field(fields: List[Field], added_field: Field):
+    def handle_root_field(added_field: Field):
         """處理根層級的新字段"""
         if field_loader.is_key_exists(fields, added_field.key):
             flash(f"File name '{added_field.key}' is already exist in root.", "warning")
             return redirect(url_for('edit_file', filename=filename))
 
         fields.append(added_field)
-        save_json2(ASSETS_FOLDER, filename, fields)
+        save_json(ASSETS_FOLDER, filename, fields)
         flash(f'Add new field "{added_field.key}" success in root.', 'success')
         return redirect(url_for('edit_file', filename=filename))
 
-    data = field_loader.load_fields_to_dict()
     new_field = create_new_field_from_request()
 
     if parent_path == '':
-        return handle_root_field(data, new_field)
+        return handle_root_field(new_field)
     else:
-        return handle_child_field(data, new_field)
+        return handle_child_field(new_field)
+
 
 @app.route('/api/delete_field/<filename>', methods=['POST'])
-def test(filename):
+def delete_field(filename):
     field_path = request.form.get('field_path')
     if not field_path:
         flash('Field path not specified', 'danger')
@@ -156,58 +161,58 @@ def test(filename):
 
         # 刪除字段
         if isinstance(parent_field, list):
-            parent_field[:] = [f for f in parent_field if f['key'] != field_name]
+            parent_field[:] = [f for f in parent_field if f.key != field_name]
         else:
             parent_field.children = [f for f in parent_field.children if f.key != field_name]
 
-        save_json2(ASSETS_FOLDER, filename, data)
+        save_json(ASSETS_FOLDER, filename, data)
         return redirect(url_for('edit_file', filename=filename))
-
-@app.route('/delete_field/<filename>')
-def delete_field(filename):
-    field_path = request.args.get('field_path')
-    if not field_path:
-        flash('Field path not specified', 'error')
-        return redirect(url_for('index'))
-    try:
-        field_loader = FieldLoader(ASSETS_FOLDER, filename)
-        data = field_loader.data
-
-        # 分割路徑
-        path_parts = field_path.split('.')
-        field_name = path_parts[-1]
-        parent_path = '.'.join(path_parts[:-1])
-
-        # 找到父字段
-        if parent_path:
-            parent_field = field_loader.find_field_by_path(data, parent_path)
-            if not parent_field:
-                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                    return jsonify({'success': False, 'message': 'Parent field not found'})
-                flash('Parent field not found', 'error')
-                return redirect(url_for('edit_file', filename=filename))
-        else:
-            parent_field = data
-
-        # 刪除字段
-        if isinstance(parent_field, list):
-            parent_field[:] = [f for f in parent_field if f['key'] != field_name]
-        else:
-            parent_field['children'] = [f for f in parent_field['children'] if f['key'] != field_name]
-
-        save_json2(ASSETS_FOLDER, filename, data)
-
-
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return jsonify({'success': True})
-        flash('Field deleted successfully', 'success')
-        return redirect(url_for('edit_file', filename=filename))
-
-    except Exception as e:
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return jsonify({'success': False, 'message': str(e)})
-        flash(f'Error deleting field: {str(e)}', 'error')
-        return redirect(url_for('edit_file', filename=filename))
+#
+# @app.route('/delete_field/<filename>')
+# def delete_field(filename):
+#     field_path = request.args.get('field_path')
+#     if not field_path:
+#         flash('Field path not specified', 'error')
+#         return redirect(url_for('index'))
+#     try:
+#         field_loader = FieldLoader(ASSETS_FOLDER, filename)
+#         data = field_loader.data
+#
+#         # 分割路徑
+#         path_parts = field_path.split('.')
+#         field_name = path_parts[-1]
+#         parent_path = '.'.join(path_parts[:-1])
+#
+#         # 找到父字段
+#         if parent_path:
+#             parent_field = field_loader.find_field_by_path(data, parent_path)
+#             if not parent_field:
+#                 if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+#                     return jsonify({'success': False, 'message': 'Parent field not found'})
+#                 flash('Parent field not found', 'error')
+#                 return redirect(url_for('edit_file', filename=filename))
+#         else:
+#             parent_field = data
+#
+#         # 刪除字段
+#         if isinstance(parent_field, list):
+#             parent_field[:] = [f for f in parent_field if f['key'] != field_name]
+#         else:
+#             parent_field['children'] = [f for f in parent_field['children'] if f['key'] != field_name]
+#
+#         save_json2(ASSETS_FOLDER, filename, data)
+#
+#
+#         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+#             return jsonify({'success': True})
+#         flash('Field deleted successfully', 'success')
+#         return redirect(url_for('edit_file', filename=filename))
+#
+#     except Exception as e:
+#         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+#             return jsonify({'success': False, 'message': str(e)})
+#         flash(f'Error deleting field: {str(e)}', 'error')
+#         return redirect(url_for('edit_file', filename=filename))
 
 
 # ==== Field 相關 ====
@@ -247,7 +252,7 @@ def update_field(filename):
     target = field_loader.find_field_by_path(fields, field_path)
     if target:
         target.update(description, field_type, item_type, regex, required)
-        save_json2(ASSETS_FOLDER, filename, fields)
+        save_json(ASSETS_FOLDER, filename, fields)
         flash('Field updated successfully', 'success')
         return redirect(url_for('edit_field', filename=filename, field_path=field_path))
 
@@ -267,7 +272,6 @@ def save_condition(filename):
     condition_value = request.form.get('condition_value')
 
     if not all([field_path, condition_key, condition_operator, condition_value]):
-
         flash(f"Missing required parameters "
               f"(Field: '{condition_key}', Operator: '{condition_operator}', Value: '{condition_value}')"
               , "danger")
@@ -283,7 +287,7 @@ def save_condition(filename):
         condition_operator,
         condition_value
     ))
-    save_json2(ASSETS_FOLDER, filename, data)
+    save_json(ASSETS_FOLDER, filename, data)
     flash('Field updated successfully', 'success')
     return redirect(url_for('edit_field', filename=filename, field_path=field_path))
 
@@ -302,7 +306,7 @@ def delete_condition(filename):
             # 如果沒有條件了，刪除整個 condition 結構
             if len(target.condition.conditions) == 0:
                 target.condition = None
-            save_json2(ASSETS_FOLDER, filename, data)
+            save_json(ASSETS_FOLDER, filename, data)
             flash("Condition deleted successfully", "success")
         else:
             flash("Condition not found", "danger")
@@ -320,7 +324,7 @@ def update_logical(filename):
 
     if target is not None:
         target.condition.logical = logical
-        save_json2(ASSETS_FOLDER, filename, data)
+        save_json(ASSETS_FOLDER, filename, data)
         flash(f"Logical operator updated to '{logical}'", "success")
     else:
         flash(f"Failed to update condition logic, cannot find target field ({field_path})",
