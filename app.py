@@ -12,7 +12,7 @@ from src.utils import FieldLoader
 from src.utils.json_loader import check_folder, save_json
 
 app = Flask(__name__)
-app.config['UPLOAD_FOLDER'] = 'assets'
+app.config['UPLOAD_FOLDER'] = os.environ.get('UPLOAD_FOLDER', 'assets')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 app.secret_key = 'your-secret-key-here'  # 用於 flash 訊息
 
@@ -304,4 +304,4 @@ def update_logical(filename):
 
 if __name__ == '__main__':
     check_folder(ASSETS_FOLDER)
-    app.run(debug=True, port=4000)
+    app.run(debug=True, host='0.0.0.0', port=4000)

@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  flask-app:
+    build: .
+    container_name: flask-app
+    ports:
+      - "4000:4000"  # Flask 端口映射
+    environment:
+      - UPLOAD_FOLDER=/app/.gitlab/precheck  # 設定 UPLOAD_FOLDER 環境變數
+    volumes:
+      - ./.gitlab/precheck:/app/.gitlab/precheck  # 本地資料夾掛載到容器
+    working_dir: /app  # 設定工作目錄
+    command: python app.py  # 啟動 Flask 應用
